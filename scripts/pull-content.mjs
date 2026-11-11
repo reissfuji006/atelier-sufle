@@ -17,6 +17,14 @@ if (!project) {
 }
 const host = process.env.FIRESTORE_EMULATOR_HOST ? `http://${process.env.FIRESTORE_EMULATOR_HOST}` : 'https://firestore.googleapis.com';
 const res = await fetch(`${host}/v1/projects/${project}/databases/(default)/documents/site/content`);
+const local = JSON.parse(readFileSync(file, 'utf8'));
+// A newly created Firebase project can return 403 until Firestore and its public-read
+// rules are configured. Keep the first static build available before any admin publish.
+// Once published content has been pulled (updatedAt/by set), permission failures are fatal.
+if (res.status === 403 && local.meta?.updatedAt == null && local.meta?.by == null) {
+  console.warn('Firestore is not ready (HTTP 403); retaining initial static content. Set up Firestore and deploy its rules before publishing.');
+  process.exit(0);
+}
 if (res.status === 404) {
   console.log('Nothing published from the admin mode yet: content/site.json is kept as is.');
   process.exit(0);
@@ -27,7 +35,6 @@ if (!res.ok) {
 }
 const doc = await res.json();
 const live = JSON.parse(doc.fields.json.stringValue);
-const local = JSON.parse(readFileSync(file, 'utf8'));
 if ((live.meta?.version || 0) <= (local.meta?.version || 0)) {
   console.log(`content/site.json is up to date (version ${local.meta?.version}).`);
 } else {
