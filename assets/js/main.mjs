@@ -2,7 +2,7 @@
 // 1. Starts the behaviours on the static page.
 // 2. Fetches the latest published content from Firestore (REST, no SDK for visitors) and
 //    re-renders the page if it is newer than the build.
-// 3. Loads the admin module only on a click on "Admin" (footer), on …/#admin, or with an admin session.
+// 3. Loads the admin module only after a visitor explicitly clicks "Admin" in the footer.
 import { renderApp, jsData } from './render.mjs';
 import { initBehaviors } from './behaviors.mjs';
 import config from './firebase-config.js';
@@ -62,9 +62,6 @@ bindLogin();
       if ((live.meta?.version || 0) > (baked.version || 0)) site.render(live);
     }
   } catch (e) { /* offline or not configured: the static page stays as built */ }
-  let resume = false;
-  try { resume = localStorage.getItem('sufle-auth') === '1'; } catch (e) {}
-  // Suhsuan can bookmark …/#admin to open the login directly.
-  if (location.hash === '#admin') openAdmin('login');
-  else if (resume) openAdmin('resume');
+  // Never show admin login or dashboard automatically, even with #admin in the URL
+  // or a previously authenticated session. Only the footer Admin button opens it.
 })();
