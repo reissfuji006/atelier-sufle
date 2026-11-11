@@ -1,0 +1,40 @@
+rules_version = '2';
+
+// Atelier Suflé content rules.
+// - Anyone can read the published site content (the public website needs it).
+// - Only admins can publish or read the version history.
+// - An admin is a signed-in user with a verified email that has a document in /admins/{email}
+//   (create it by hand in the Firebase console; nobody can create it from the website).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()));
+    }
+    function validContent() {
+      return request.resource.data.keys().hasOnly(['json', 'version', 'updatedAt', 'by'])
+        && request.resource.data.json is string
+        && request.resource.data.json.size() < 900000
+        && request.resource.data.version is int
+        && request.resource.data.by == request.auth.token.email;
+    }
+
+    match /site/content {
+      allow read: if true;
+      allow write: if isAdmin() && validContent();
+    }
+    match /history/{id} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && validContent();
+      allow update, delete: if false;
+    }
+    match /admins/{email} {
+      allow read: if request.auth != null && request.auth.token.email.lower() == email;
+      allow write: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

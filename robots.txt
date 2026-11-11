@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://reissfuji006.github.io/atelier-sufle/sitemap.xml

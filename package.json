@@ -1,0 +1,16 @@
+{
+  "name": "atelier-sufle",
+  "private": true,
+  "type": "module",
+  "description": "Website for Atelier Suflé, flute lessons with Suhsuan Wang in Bonn, Köln and online",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "vendor": "node scripts/vendor.mjs",
+    "pull": "node scripts/pull-content.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.2",
+    "firebase": "11.1.0",
+    "opencc-js": "1.0.5"
+  }
+}

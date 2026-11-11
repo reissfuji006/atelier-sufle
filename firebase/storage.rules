@@ -1,0 +1,22 @@
+rules_version = '2';
+
+// Atelier Suflé photo rules.
+// - Anyone can view uploaded photos (they appear on the public website).
+// - Only admins (same definition as in firestore.rules) can upload: images only, under 8 MB.
+// - Nobody can delete or overwrite from the website; old photos stay available for restored versions.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /media/{file} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.auth.token.email_verified == true
+        && firestore.exists(/databases/(default)/documents/admins/$(request.auth.token.email.lower()))
+        && request.resource.size < 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/(webp|jpeg|png)');
+      allow update, delete: if false;
+    }
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,68 @@
+# Builds and publishes the site on GitHub Pages.
+# Runs on every push, every 3 hours (to bake in what was published from the admin mode, so Google
+# indexes it), and on demand (Actions > Build and deploy > Run workflow).
+# Requires: Settings > Pages > Build and deployment > Source: "GitHub Actions".
+name: Build and deploy
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 */3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Pull content published from the admin mode
+        run: npm run pull
+
+      - name: Build pages
+        run: npm run build
+
+      - name: Keep the pulled content in the repository
+        run: |
+          if [ -n "$(git status --porcelain content index.html de zh-hant zh-hans sitemap.xml)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add content index.html de zh-hant zh-hans sitemap.xml robots.txt
+            git commit -m "Update content published from the admin mode"
+            git push
+          fi
+
+      - name: Collect the site files
+        run: |
+          mkdir -p _site
+          rsync -a --exclude node_modules --exclude .git --exclude .github --exclude _site \
+            --exclude scripts --exclude firebase --exclude 'package*.json' --exclude firebase.json ./ _site/
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
