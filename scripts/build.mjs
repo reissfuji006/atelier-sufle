@@ -4,6 +4,7 @@
 //
 // Usage: npm run build
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as OpenCC from 'opencc-js';
@@ -11,6 +12,8 @@ import { LANGS, PATHS, HTML_LANG, renderApp, renderHead, jsData, esc } from '../
 
 const SITE = join(dirname(fileURLToPath(import.meta.url)), '..');
 const content = JSON.parse(readFileSync(join(SITE, 'content/site.json'), 'utf8'));
+// Invalidate cached visitor scripts on deployment so old auto-login logic cannot persist.
+const appRevision = createHash('sha256').update(readFileSync(join(SITE, 'assets/js/main.mjs'))).digest('hex').slice(0, 12);
 
 // Fill Simplified Chinese from Traditional where no Simplified text exists.
 const t2s = OpenCC.Converter({ from: 'tw', to: 'cn' });
@@ -37,7 +40,7 @@ ${renderApp(content, { lang, root })}
 </div>
 
 <script type="application/json" id="i18n">${JSON.stringify(jsData(content, lang)).replace(/</g, '\\u003c')}</script>
-<script type="module" src="${root}assets/js/main.mjs"></script>
+<script type="module" src="${root}assets/js/main.mjs?v=${appRevision}"></script>
 </body>
 </html>
 `;
